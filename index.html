@@ -250,8 +250,8 @@
         let powerup = null;
         if (i !== 1) { // No powerup on spawn
           const r = Math.random();
-          if (r < 0.10) powerup = 'helicopter'; // 10%
-          else if (r < 0.35) powerup = 'spring'; // 25%
+          if (r < 0.03) powerup = 'helicopter';
+          else if (r < 0.13) powerup = 'spring';
         }
         platforms.push({ x: px, y: py, w: 65, h: 15, type: type, vx: type === 'moving' ? (Math.random() < 0.5 ? 2 : -2) : 0, powerup: powerup });
       }
@@ -374,8 +374,8 @@
         const type = Math.random() < 0.2 ? 'moving' : 'static';
         let powerup = null;
         const r = Math.random();
-        if (r < 0.10) powerup = 'helicopter'; // 10%
-        else if (r < 0.35) powerup = 'spring'; // 25%
+        if (r < 0.03) powerup = 'helicopter';
+        else if (r < 0.13) powerup = 'spring';
         platforms.push({ x: px, y: py, w: 65, h: 15, type: type, vx: type === 'moving' ? (Math.random() < 0.5 ? 2 : -2) : 0, powerup: powerup });
         highestY = py;
       }
