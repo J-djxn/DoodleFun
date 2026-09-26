@@ -212,6 +212,7 @@
 
     let keys = { left: false, right: false };
     let touchX = null;
+    let tiltX = 0;
 
     let dpr = window.devicePixelRatio || 1;
     let canvasWidth = canvas.clientWidth;
@@ -257,7 +258,32 @@
       }
     }
 
+    function handleOrientation(e) {
+      if (e.gamma !== null) {
+        // Gamma is the left-to-right tilt in degrees
+        let gamma = e.gamma;
+        // Clamp gamma between -45 and 45 degrees
+        if (gamma > 45) gamma = 45;
+        if (gamma < -45) gamma = -45;
+        // Normalize to [-1, 1]
+        tiltX = gamma / 45;
+      }
+    }
+
     function startGame() {
+      // Request device orientation permissions if necessary (iOS 13+)
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+          .then(permissionState => {
+            if (permissionState === 'granted') {
+              window.addEventListener('deviceorientation', handleOrientation);
+            }
+          })
+          .catch(console.error);
+      } else {
+        window.addEventListener('deviceorientation', handleOrientation);
+      }
+
       state = 'PLAYING';
       mainMenu.classList.add('hidden');
       gameOverMenu.classList.add('hidden');
@@ -298,6 +324,10 @@
       if (touchX !== null) {
         if (touchX < window.innerWidth / 2) player.vx -= playerSpeed;
         else player.vx += playerSpeed;
+      }
+
+      if (tiltX !== 0) {
+        player.vx += tiltX * playerSpeed * 1.5;
       }
 
       player.vx *= friction;
