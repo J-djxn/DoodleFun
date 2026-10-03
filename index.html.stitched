@@ -1,0 +1,881 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doodle Jump</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Patrick+Hand&display=swap"
+    rel="stylesheet">
+  <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+    }
+
+    body {
+      background: #dce4e8;
+    }
+
+    .notebook {
+      background-color: #f7eee0;
+      background-image:
+        linear-gradient(rgba(119, 160, 194, .18) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(119, 160, 194, .18) 1px, transparent 1px),
+        linear-gradient(rgba(119, 160, 194, .08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(119, 160, 194, .08) 1px, transparent 1px);
+      background-position: -1px -1px;
+      background-size: 32px 32px, 32px 32px, 8px 8px, 8px 8px;
+      font-family: 'Patrick Hand', cursive;
+    }
+
+    .title-sketch {
+      font-family: 'Kalam', cursive;
+      font-size: clamp(5rem, 22vw, 7rem);
+      font-weight: 700;
+      line-height: .72;
+      letter-spacing: -.08em;
+      text-shadow: 3px 3px 0 rgba(41, 76, 112, .12);
+      transform: rotate(-3deg);
+    }
+
+    .score-stamp {
+      color: #315a86;
+      font-family: 'Kalam', cursive;
+      font-size: 1.05rem;
+      line-height: .8;
+      text-align: center;
+      transform-origin: top left;
+    }
+
+    .score-stamp strong {
+      display: block;
+      font-size: 2.1rem;
+      letter-spacing: .02em;
+    }
+
+    .sketch-button,
+    .play-button {
+      border: 3px solid #385c80;
+      border-radius: 1rem 1.3rem .9rem 1.1rem;
+      box-shadow: 2px 3px 0 rgba(45, 76, 107, .18);
+      font-family: 'Patrick Hand', cursive;
+      font-weight: 700;
+      transition: transform 150ms ease, box-shadow 150ms ease;
+      cursor: pointer;
+    }
+
+    .sketch-button:hover,
+    .play-button:hover {
+      transform: translateY(-2px) rotate(-1deg);
+      box-shadow: 3px 5px 0 rgba(45, 76, 107, .18);
+    }
+
+    .play-button {
+      min-width: 174px;
+      border-color: #8d463d;
+      background: #e78468;
+      color: #fff8e9;
+      padding: .7rem 1.6rem;
+      font-size: 2rem;
+      transform: rotate(-2deg);
+    }
+
+    .play-button span {
+      margin-left: .7rem;
+      font-size: 1.7rem;
+    }
+
+    .loading-cover {
+      background: #f7eee0;
+      background-image: radial-gradient(rgba(80, 116, 148, .14) 1px, transparent 1px);
+      background-size: 12px 12px;
+    }
+
+    .loading-doodle {
+      width: 64px;
+      height: 64px;
+      border: 3px solid #527ba2;
+      border-radius: 48% 52% 45% 55%;
+      color: #e78468;
+      font-size: 3rem;
+      line-height: 58px;
+      transform: rotate(8deg);
+    }
+
+    @media (min-width: 640px) {
+      main {
+        padding: 0 1.5rem;
+      }
+
+      .notebook {
+        border-left: 0;
+        border-right: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="min-h-screen px-0 sm:px-6">
+    <section
+      class="notebook relative mx-auto h-screen max-w-md overflow-hidden border-x-4 border-[#284b6f]/15 shadow-2xl sm:border-x-0 sm:rounded-none">
+      <canvas id="gameCanvas" class="absolute inset-0 z-0 h-full w-full"
+        aria-label="Doodle platformer game canvas"></canvas>
+
+      <div class="relative z-10 flex h-full flex-col p-5 sm:p-7">
+        <header class="flex items-start justify-between">
+          <div class="score-stamp -rotate-2">
+            <span class="block text-xs uppercase tracking-[0.2em]">score</span>
+            <strong id="score">1,240</strong>
+          </div>
+          <div class="text-right">
+            <div class="score-stamp rotate-2 mb-2">
+              <span class="block text-xs uppercase tracking-[0.2em] text-[#d1ad63]">coins</span>
+              <strong id="coinCount" class="text-[#d1ad63]">0</strong>
+            </div>
+          </div>
+        </header>
+
+        <div id="mainMenu" class="flex flex-1 items-center justify-center transition-opacity duration-300">
+          <div class="w-full max-w-[310px] text-center">
+            <p class="mb-3 -rotate-2 text-lg font-bold text-[#5f7ea4]">a tiny adventure in the clouds</p>
+            <h1 class="title-sketch text-[#294c70]">Doodle<br><span class="text-[#dd745d]">Jump</span></h1>
+            <div class="mx-auto mt-5 w-fit -rotate-2 border-b-4 border-[#d1ad63] px-2 text-lg font-bold text-[#496f98]">
+              keep climbing!</div>
+            <button id="playButton" type="button" class="play-button mt-10 w-full mb-4">Play <span
+                aria-hidden="true">→</span></button>
+            <button id="shopButton" type="button" class="sketch-button block w-full mx-auto px-4 py-2 bg-[#f0d486] text-[#6b4c1e] text-2xl font-bold">🛒 Shop</button>
+            <p id="hint" class="mt-7 text-sm text-[#55718e]">tap play to start your sketchbook story</p>
+          </div>
+        </div>
+
+        <div id="shopMenu" class="hidden flex flex-1 flex-col items-center justify-center transition-opacity duration-300 z-30 bg-[#f7eee0] absolute inset-0 p-5">
+          <h2 class="title-sketch text-[#294c70] !text-5xl mb-2 mt-4">Shop</h2>
+          <div class="score-stamp rotate-1 mb-6">
+             <span class="block text-xs uppercase tracking-[0.2em] text-[#d1ad63]">coins</span>
+             <strong id="shopCoinCount" class="text-[#d1ad63]">0</strong>
+          </div>
+          <div id="shopItems" class="w-full max-w-[310px] flex-1 overflow-y-auto space-y-3 mb-6 pr-2">
+            <!-- Shop items injected here -->
+          </div>
+          <button id="closeShopButton" type="button" class="sketch-button px-8 py-3 bg-[#e78468] text-white text-2xl w-full max-w-[310px] mb-4">Back</button>
+        </div>
+
+        <div id="gameOverMenu" class="hidden flex flex-1 items-center justify-center transition-opacity duration-300">
+          <div
+            class="w-full max-w-[310px] text-center bg-[#f7eee0] p-6 border-4 border-[#2b4823] rounded-2xl shadow-xl -rotate-1 relative z-20">
+            <h2 class="title-sketch text-[#dd745d] !text-5xl mb-4">Game Over</h2>
+            <p class="text-2xl font-bold text-[#294c70] font-[Patrick_Hand]">Score: <span id="finalScore">0</span></p>
+            <p class="text-xl font-bold text-[#5a7897] font-[Patrick_Hand] mb-8">Best: <span
+                id="finalBestScore">0</span></p>
+            <button id="reviveButton" type="button" class="play-button bg-[#9b59b6] border-[#8e44ad] text-white mb-4 !text-2xl min-w-[200px] w-full block">📺 Watch Ad to Revive!</button>
+            <button id="playAgainButton" type="button" class="play-button !text-xl w-full block">Play Again</button>
+          </div>
+        </div>
+
+        <footer class="flex items-end justify-between text-sm font-bold text-[#5a7897]">
+          <span id="bestScoreLabel" class="-rotate-3">best: 0</span>
+          <span class="rotate-2">v1.0.4 • made with ink</span>
+        </footer>
+      </div>
+
+      <button id="soundButton" class="absolute top-4 left-4 z-50 text-2xl drop-shadow-md transition-transform hover:scale-110" aria-label="Toggle Sound">🔊</button>
+
+      <div id="loadingCover"
+        class="loading-cover absolute inset-0 z-20 flex items-center justify-center transition-opacity duration-500"
+        aria-live="polite">
+        <div class="text-center">
+          <div class="loading-doodle mx-auto mb-6">✦</div>
+          <p class="text-3xl font-bold text-[#294c70]">Loading Sketches...</p>
+          <p class="mt-2 text-sm text-[#6f879a]">sharpening the pencils</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    window.CrazyGames.SDK.init();
+
+        const freq = notes[this.bgNoteIndex % notes.length];
+        this.bgNoteIndex++;
+
+        const osc = this.ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+        
+        osc.connect(gain);
+        gain.connect(this.bgGain);
+        
+        osc.start(now);
+        osc.stop(now + 0.25);
+
+        osc.onended = () => {
+          if (this.isPlayingBg) this.playNextNote();
+        };
+      }
+    };
+
+    const canvas = document.getElementById('gameCanvas');
+    const context = canvas.getContext('2d');
+    const scoreElement = document.getElementById('score');
+    const playButton = document.getElementById('playButton');
+    const playAgainButton = document.getElementById('playAgainButton');
+    const reviveButton = document.getElementById('reviveButton');
+    const shopButton = document.getElementById('shopButton');
+    const closeShopButton = document.getElementById('closeShopButton');
+    const coinElement = document.getElementById('coinCount');
+    const shopCoinElement = document.getElementById('shopCoinCount');
+    const soundButton = document.getElementById('soundButton');
+    const mainMenu = document.getElementById('mainMenu');
+    const shopMenu = document.getElementById('shopMenu');
+    const gameOverMenu = document.getElementById('gameOverMenu');
+    const finalScoreEl = document.getElementById('finalScore');
+    const finalBestScoreEl = document.getElementById('finalBestScore');
+    const bestScoreLabel = document.getElementById('bestScoreLabel');
+    const loadingCover = document.getElementById('loadingCover');
+
+    let state = 'MENU';
+    let score = 0;
+    let bestScore = parseInt(localStorage.getItem('doodle_best_score')) || 0;
+    let lastMilestone = 0;
+    
+    let totalCoins = parseInt(localStorage.getItem('doodle_coins')) || 0;
+    let unlockedSkins = ['Green'];
+    try {
+      const stored = localStorage.getItem('doodle_unlockedSkins');
+      if (stored) unlockedSkins = JSON.parse(stored);
+    } catch (e) {}
+    let equippedSkin = localStorage.getItem('doodle_equippedSkin') || 'Green';
+
+    const gravity = 0.4;
+    const bounceVelocity = -11;
+    const playerSpeed = 0.8;
+    const friction = 0.85;
+
+    const coinImage = new Image();
+    coinImage.src = ASSETS.img_coinGold;
+
+    const playerImages = {
+      Green: { stand: new Image(), jump: new Image() },
+      Blue: { stand: new Image(), jump: new Image() },
+      Pink: { stand: new Image(), jump: new Image() },
+      Yellow: { stand: new Image(), jump: new Image() },
+      Beige: { stand: new Image(), jump: new Image() }
+    };
+    
+    for (let color in playerImages) {
+      playerImages[color].stand.src = ASSETS[color + '_stand'];
+      playerImages[color].jump.src = ASSETS[color + '_jump'];
+    }
+
+    let player = { x: 0, y: 0, w: 40, h: 40, vx: 0, vy: 0, squashTimer: 0, isFlying: false, flightTimer: 0 };
+    let platforms = [];
+
+    let keys = { left: false, right: false };
+    let touchX = null;
+    let tiltX = 0;
+
+    let dpr = window.devicePixelRatio || 1;
+    let canvasWidth = canvas.clientWidth;
+    let canvasHeight = canvas.clientHeight;
+    let animationFrameId;
+
+    bestScoreLabel.textContent = `best: ${bestScore.toLocaleString()}`;
+    scoreElement.textContent = score;
+    coinElement.textContent = totalCoins;
+
+    function initGame() {
+      score = 0;
+      lastMilestone = 0;
+      scoreElement.textContent = score;
+      canvasWidth = canvas.clientWidth;
+      canvasHeight = canvas.clientHeight;
+
+      player = {
+        x: canvasWidth / 2 - 20,
+        y: canvasHeight / 2,
+        w: 40,
+        h: 40,
+        vx: 0,
+        vy: 0,
+        squashTimer: 0,
+        isFlying: false,
+        flightTimer: 0
+      };
+
+      platforms = [];
+      const platformCount = 10;
+      const platformSpacing = canvasHeight / platformCount;
+
+      for (let i = 0; i < platformCount; i++) {
+        const py = canvasHeight - i * platformSpacing;
+        const px = (i === 1) ? player.x - 12.5 : Math.random() * (canvasWidth - 65);
+        const type = Math.random() < 0.2 ? 'moving' : 'static';
+        let powerup = null;
+        if (i !== 1) { // No powerup on spawn
+          const r = Math.random();
+          if (r < 0.03) powerup = 'helicopter';
+          else if (r < 0.13) powerup = 'spring';
+        }
+        const hasCoin = (!powerup && i !== 1 && Math.random() < 0.3);
+        platforms.push({ x: px, y: py, w: 65, h: 15, type: type, vx: type === 'moving' ? (Math.random() < 0.5 ? 2 : -2) : 0, powerup: powerup, hasCoin: hasCoin });
+      }
+    }
+
+    function handleOrientation(e) {
+      if (e.gamma !== null) {
+        // Gamma is the left-to-right tilt in degrees
+        let gamma = e.gamma;
+        // Clamp gamma between -45 and 45 degrees
+        if (gamma > 45) gamma = 45;
+        if (gamma < -45) gamma = -45;
+        // Normalize to [-1, 1]
+        tiltX = gamma / 45;
+      }
+    }
+
+    function startGame() {
+      audio.init();
+      audio.startBgMusic();
+      
+      // Request device orientation permissions if necessary (iOS 13+)
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+          .then(permissionState => {
+            if (permissionState === 'granted') {
+              window.addEventListener('deviceorientation', handleOrientation);
+            }
+          })
+          .catch(console.error);
+      } else {
+        window.addEventListener('deviceorientation', handleOrientation);
+      }
+
+      state = 'PLAYING';
+      mainMenu.classList.add('hidden');
+      gameOverMenu.classList.add('hidden');
+      initGame();
+      
+      window.CrazyGames.SDK.game.gameplayStart();
+      
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      gameLoop();
+    }
+
+    function gameOver() {
+      state = 'GAMEOVER';
+      if (score > bestScore) {
+        bestScore = Math.floor(score);
+        localStorage.setItem('doodle_best_score', bestScore);
+        bestScoreLabel.textContent = `best: ${bestScore.toLocaleString()}`;
+      }
+
+      window.CrazyGames.SDK.game.gameplayStop();
+      audio.stopBgMusic();
+      audio.playGameOver();
+
+      finalScoreEl.textContent = Math.floor(score).toLocaleString();
+      finalBestScoreEl.textContent = bestScore.toLocaleString();
+      gameOverMenu.classList.remove('hidden');
+    }
+
+    function updatePhysics() {
+      if (state !== 'PLAYING') return;
+
+      if (keys.left) player.vx -= playerSpeed;
+      if (keys.right) player.vx += playerSpeed;
+
+      if (touchX !== null) {
+        if (touchX < window.innerWidth / 2) player.vx -= playerSpeed;
+        else player.vx += playerSpeed;
+      }
+
+      if (tiltX !== 0) {
+        player.vx += tiltX * playerSpeed * 1.5;
+      }
+
+      player.vx *= friction;
+      player.x += player.vx;
+
+      if (player.x + player.w < 0) player.x = canvasWidth;
+      else if (player.x > canvasWidth) player.x = -player.w;
+
+      if (player.isFlying) {
+        player.vy = -14;
+        if (performance.now() - player.flightTimer > 3500) {
+          player.isFlying = false;
+        }
+      } else {
+        player.vy += gravity;
+      }
+      player.y += player.vy;
+      
+      // Coin Collection
+      for (let p of platforms) {
+        if (p.hasCoin) {
+          const coinX = p.x + p.w / 2 - 15;
+          const coinY = p.y - 35;
+          if (
+            player.x + player.w > coinX &&
+            player.x < coinX + 30 &&
+            player.y + player.h > coinY &&
+            player.y < coinY + 30
+          ) {
+            p.hasCoin = false;
+            totalCoins++;
+            localStorage.setItem('doodle_coins', totalCoins);
+            coinElement.textContent = totalCoins;
+            audio.playCoin();
+          }
+        }
+      }
+
+      if (player.vy > 0 && !player.isFlying) {
+        for (let p of platforms) {
+          if (
+            player.x + player.w > p.x &&
+            player.x < p.x + p.w &&
+            player.y + player.h > p.y &&
+            player.y + player.h < p.y + p.h + player.vy
+          ) {
+            if (p.powerup === 'spring') {
+              player.vy = -22;
+              p.powerup = null;
+              player.squashTimer = performance.now();
+              audio.playSpring();
+            } else if (p.powerup === 'helicopter') {
+              player.isFlying = true;
+              player.flightTimer = performance.now();
+              p.powerup = null;
+              audio.playHelicopter();
+            } else {
+              player.vy = bounceVelocity;
+              player.squashTimer = performance.now();
+              audio.playJump();
+            }
+            break;
+          }
+        }
+      }
+
+      const midpoint = canvasHeight * 0.45;
+      if (player.y < midpoint) {
+        const scrollOffset = midpoint - player.y;
+        player.y = midpoint;
+        score += scrollOffset;
+        scoreElement.textContent = Math.floor(score).toLocaleString();
+
+        const currentMilestone = Math.floor(score / 5000) * 5000;
+        if (currentMilestone > lastMilestone && currentMilestone > 0) {
+           let coinsToGive = 0;
+           if (currentMilestone === 50000) coinsToGive = 50;
+           else if (currentMilestone === 10000) coinsToGive = 20;
+           else if (currentMilestone === 20000 || currentMilestone === 30000 || currentMilestone === 40000) coinsToGive = 10;
+           else if (currentMilestone % 5000 === 0) coinsToGive = 5;
+           
+           if (coinsToGive > 0) {
+             totalCoins += coinsToGive;
+             localStorage.setItem('doodle_coins', totalCoins);
+             coinElement.textContent = totalCoins;
+           }
+           lastMilestone = currentMilestone;
+        }
+
+        for (let p of platforms) {
+          p.y += scrollOffset;
+        }
+      }
+
+      let highestY = canvasHeight;
+      for (let i = platforms.length - 1; i >= 0; i--) {
+        let p = platforms[i];
+        if (p.type === 'moving') {
+          p.x += p.vx;
+          if (p.x < 0 || p.x + p.w > canvasWidth) p.vx *= -1;
+        }
+
+        if (p.y > canvasHeight) {
+          platforms.splice(i, 1);
+        } else {
+          if (p.y < highestY) highestY = p.y;
+        }
+      }
+
+      while (highestY > -50) {
+        const py = highestY - (Math.random() * 40 + 50);
+        const px = Math.random() * (canvasWidth - 65);
+        const type = Math.random() < 0.2 ? 'moving' : 'static';
+        let powerup = null;
+        const r = Math.random();
+        if (r < 0.03) powerup = 'helicopter';
+        else if (r < 0.13) powerup = 'spring';
+        const hasCoin = (!powerup && Math.random() < 0.3);
+        platforms.push({ x: px, y: py, w: 65, h: 15, type: type, vx: type === 'moving' ? (Math.random() < 0.5 ? 2 : -2) : 0, powerup: powerup, hasCoin: hasCoin });
+        highestY = py;
+      }
+
+      if (player.y > canvasHeight) {
+        gameOver();
+      }
+    }
+
+    function drawMenuBackground() {
+      context.strokeStyle = '#496f98';
+      context.lineWidth = 2;
+      context.globalAlpha = .2;
+      context.beginPath();
+      context.moveTo(canvasWidth * .18, canvasHeight * .69);
+      context.lineTo(canvasWidth * .34, canvasHeight * .65);
+      context.lineTo(canvasWidth * .5, canvasHeight * .68);
+      context.stroke();
+      context.globalAlpha = 1;
+
+      context.fillStyle = '#789cce';
+      context.beginPath();
+      context.arc(canvasWidth * .22, canvasHeight * .22, 34, 0, Math.PI * 2);
+      context.fill();
+      context.strokeStyle = '#2f537d';
+      context.stroke();
+
+      context.fillStyle = '#f7eee0';
+      context.beginPath();
+      context.arc(canvasWidth * .21, canvasHeight * .215, 27, 0, Math.PI * 2);
+      context.fill();
+      context.fillStyle = '#2f537d';
+      context.font = "700 11px 'Patrick Hand'";
+      context.fillText('SKY', canvasWidth * .18, canvasHeight * .22);
+    }
+
+    function drawPlatform(p) {
+      context.fillStyle = p.type === 'moving' ? '#6296b5' : '#78ab46';
+      context.strokeStyle = '#2b4823';
+      context.lineWidth = 2.5;
+
+      context.beginPath();
+      if (context.roundRect) {
+        context.roundRect(p.x, p.y, p.w, p.h, 5);
+      } else {
+        context.rect(p.x, p.y, p.w, p.h);
+      }
+      context.fill();
+      context.stroke();
+
+      context.strokeStyle = p.type === 'moving' ? '#4a7692' : '#5c8734';
+      context.lineWidth = 1;
+      context.beginPath();
+      for (let i = 8; i < p.w - 5; i += 12) {
+        context.moveTo(p.x + i, p.y + 3);
+        context.lineTo(p.x + i + 2, p.y + p.h - 3);
+      }
+      context.stroke();
+      
+      if (p.hasCoin) {
+        if (coinImage.complete && coinImage.naturalHeight !== 0) {
+           context.drawImage(coinImage, p.x + p.w / 2 - 15, p.y - 35, 30, 30);
+        } else {
+           context.fillStyle = 'gold';
+           context.beginPath();
+           context.arc(p.x + p.w / 2, p.y - 20, 15, 0, Math.PI * 2);
+           context.fill();
+        }
+      }
+
+      if (p.powerup === 'spring') {
+        context.strokeStyle = '#8291a1';
+        context.lineWidth = 2.5;
+        context.beginPath();
+        context.moveTo(p.x + 25, p.y);
+        context.lineTo(p.x + 35, p.y - 4);
+        context.lineTo(p.x + 25, p.y - 8);
+        context.lineTo(p.x + 35, p.y - 12);
+        context.stroke();
+      } else if (p.powerup === 'helicopter') {
+        context.fillStyle = '#db6e59';
+        context.strokeStyle = '#2f537d';
+        context.lineWidth = 2;
+        context.beginPath();
+        context.arc(p.x + 32, p.y, 8, Math.PI, 0);
+        context.fill();
+        context.stroke();
+        context.beginPath();
+        context.moveTo(p.x + 22, p.y);
+        context.lineTo(p.x + 42, p.y);
+        context.stroke();
+        context.beginPath();
+        context.moveTo(p.x + 32, p.y - 8);
+        context.lineTo(p.x + 32, p.y - 12);
+        context.moveTo(p.x + 24, p.y - 12);
+        context.lineTo(p.x + 40, p.y - 12);
+        context.stroke();
+      }
+    }
+
+    function drawPlayer() {
+      const now = performance.now();
+      let scaleX = 1;
+      let scaleY = 1;
+
+      if (now - player.squashTimer < 80) {
+        scaleX = 1.15;
+        scaleY = 0.85;
+      }
+
+      context.save();
+      context.translate(player.x + player.w / 2, player.y + player.h / 2);
+      
+      const snoutDir = player.vx < 0 ? -1 : 1;
+      context.scale(scaleX * snoutDir, scaleY);
+
+      const skinImgs = playerImages[equippedSkin] || playerImages['Green'];
+      const img = (player.vy < 0 || player.isFlying) ? skinImgs.jump : skinImgs.stand;
+      
+      if (img.complete && img.naturalHeight !== 0) {
+        // The images are 128x256, scaled down to 40x80 to make it smaller
+        // We set Y to -60 so the bottom of the 80px image (-60 + 80 = 20)
+        // aligns exactly with the bottom of the 40x40 hitbox (which is +20 from center)
+        context.drawImage(img, -20, -60, 40, 80);
+      } else {
+        context.fillStyle = '#8cc63f';
+        context.fillRect(-player.w / 2, -player.h / 2, player.w, player.h);
+      }
+
+      context.scale(snoutDir, 1);
+
+      if (player.isFlying) {
+        context.fillStyle = '#db6e59';
+        context.strokeStyle = '#2f537d';
+        context.lineWidth = 2;
+        
+        context.beginPath();
+        context.arc(0, -60, 10, Math.PI, 0);
+        context.fill();
+        context.stroke();
+        
+        context.beginPath();
+        context.moveTo(-15, -60);
+        context.lineTo(15, -60);
+        context.stroke();
+        
+        context.beginPath();
+        context.moveTo(0, -70);
+        context.lineTo(0, -76);
+        context.stroke();
+        
+        context.save();
+        context.translate(0, -76);
+        context.rotate(performance.now() / 20);
+        context.beginPath();
+        context.moveTo(-15, 0);
+        context.lineTo(15, 0);
+        context.stroke();
+        context.restore();
+      }
+
+      context.restore();
+    }
+
+    function draw() {
+      context.clearRect(0, 0, canvasWidth, canvasHeight);
+
+      if (state === 'MENU') {
+        drawMenuBackground();
+      } else {
+        for (let p of platforms) {
+          drawPlatform(p);
+        }
+        if (state === 'PLAYING') {
+          drawPlayer();
+        }
+      }
+    }
+
+    function gameLoop() {
+      if (state === 'PLAYING') {
+        updatePhysics();
+        draw();
+        animationFrameId = requestAnimationFrame(gameLoop);
+      }
+    }
+
+    function resizeCanvas() {
+      dpr = window.devicePixelRatio || 1;
+      canvasWidth = canvas.clientWidth;
+      canvasHeight = canvas.clientHeight;
+      canvas.width = canvasWidth * dpr;
+      canvas.height = canvasHeight * dpr;
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      if (state !== 'PLAYING') {
+        draw();
+      }
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+      if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+      if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+    });
+
+    window.addEventListener('touchstart', (e) => {
+      touchX = e.touches[0].clientX;
+    }, { passive: true });
+    window.addEventListener('touchmove', (e) => {
+      touchX = e.touches[0].clientX;
+    }, { passive: true });
+    window.addEventListener('touchend', (e) => {
+      touchX = null;
+    });
+
+    const skinsData = {
+      Green: { price: 0 },
+      Blue: { price: 100 },
+      Pink: { price: 200 },
+      Yellow: { price: 400 },
+      Beige: { price: 500 } // Kept this one the same
+    };
+
+    function renderShop() {
+      shopCoinElement.textContent = totalCoins;
+      const shopItemsContainer = document.getElementById('shopItems');
+      shopItemsContainer.innerHTML = '';
+      
+      for (const [skin, data] of Object.entries(skinsData)) {
+        const isUnlocked = unlockedSkins.includes(skin);
+        const isEquipped = equippedSkin === skin;
+        
+        const itemDiv = document.createElement('div');
+        itemDiv.className = `flex items-center justify-between p-3 rounded-xl border-4 ${isEquipped ? 'border-[#8cc63f] bg-[#eef7e3]' : 'border-[#385c80] bg-white'}`;
+        
+        const infoDiv = document.createElement('div');
+        infoDiv.className = "flex items-center gap-3";
+        infoDiv.innerHTML = `
+          <img src="${ASSETS[skin + '_stand']}" alt="${skin} Alien" class="h-12 w-auto object-contain drop-shadow-md">
+          <div>
+            <span class="block font-bold text-lg text-[#294c70] leading-tight">${skin} Alien</span>
+            ${!isUnlocked ? `<span class="block text-sm font-bold text-[#e78468]">${data.price} Coins</span>` : ''}
+          </div>
+        `;
+        
+        const actionBtn = document.createElement('button');
+        actionBtn.className = 'sketch-button px-4 py-1 text-sm font-bold ' + (isEquipped ? 'bg-[#8cc63f] text-white' : 'bg-[#e78468] text-white');
+        
+        if (isEquipped) {
+          actionBtn.textContent = 'Equipped';
+          actionBtn.disabled = true;
+        } else if (isUnlocked) {
+          actionBtn.textContent = 'Equip';
+          actionBtn.onclick = () => {
+            equippedSkin = skin;
+            localStorage.setItem('doodle_equippedSkin', equippedSkin);
+            renderShop();
+          };
+        } else {
+          actionBtn.textContent = 'Buy';
+          actionBtn.onclick = () => {
+            if (totalCoins >= data.price) {
+              totalCoins -= data.price;
+              localStorage.setItem('doodle_coins', totalCoins);
+              unlockedSkins.push(skin);
+              localStorage.setItem('doodle_unlockedSkins', JSON.stringify(unlockedSkins));
+              equippedSkin = skin;
+              localStorage.setItem('doodle_equippedSkin', equippedSkin);
+              coinElement.textContent = totalCoins;
+              renderShop();
+            } else {
+              const originalText = actionBtn.textContent;
+              actionBtn.textContent = 'Not enough!';
+              actionBtn.classList.replace('bg-[#e78468]', 'bg-gray-400');
+              setTimeout(() => {
+                actionBtn.textContent = originalText;
+                actionBtn.classList.replace('bg-gray-400', 'bg-[#e78468]');
+              }, 1500);
+            }
+          };
+        }
+        
+        itemDiv.appendChild(infoDiv);
+        itemDiv.appendChild(actionBtn);
+        shopItemsContainer.appendChild(itemDiv);
+      }
+    }
+
+    shopButton.addEventListener('click', () => {
+      mainMenu.classList.add('hidden');
+      shopMenu.classList.remove('hidden');
+      renderShop();
+    });
+
+    closeShopButton.addEventListener('click', () => {
+      shopMenu.classList.add('hidden');
+      mainMenu.classList.remove('hidden');
+    });
+
+    soundButton.addEventListener('click', () => {
+      const muted = audio.toggleMute();
+      soundButton.textContent = muted ? '🔇' : '🔊';
+    });
+
+    // Global listener for all buttons to play click sound
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('button')) {
+        audio.init();
+        audio.playClick();
+      }
+    });
+
+    playButton.addEventListener('click', startGame);
+    playAgainButton.addEventListener('click', startGame);
+
+    reviveButton.addEventListener('click', () => {
+      window.CrazyGames.SDK.ad.requestAd('rewarded', {
+        adStarted: () => {
+          // Pause audio if applicable
+        },
+        adFinished: () => {
+          // The player watched the ad. Revive them!
+          state = 'PLAYING';
+          gameOverMenu.classList.add('hidden');
+
+          // Boost them up slightly from their highest point and activate helicopter
+          player.y -= canvasHeight; 
+          player.isFlying = true;
+          player.flightTimer = performance.now();
+
+          // Restart the game loop and playtime tracking
+          window.CrazyGames.SDK.game.gameplayStart();
+          if (animationFrameId) cancelAnimationFrame(animationFrameId);
+          gameLoop();
+        },
+        adError: (error) => {
+          alert("Ad failed to load. Try playing again!");
+        }
+      });
+    });
+
+    window.setTimeout(() => {
+      loadingCover.classList.add('opacity-0', 'pointer-events-none');
+    }, 900);
+  </script>
+</body>
+
+</html>
